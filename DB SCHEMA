@@ -1,0 +1,99 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.appointment (
+  apptid uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clientid uuid NOT NULL,
+  serviceid uuid NOT NULL,
+  staffid uuid,
+  date date NOT NULL,
+  time time without time zone NOT NULL,
+  status character varying NOT NULL DEFAULT 'Pending'::character varying CHECK (status::text = ANY (ARRAY['Pending'::character varying, 'Confirmed'::character varying, 'Completed'::character varying, 'Cancelled'::character varying, 'No-Show'::character varying]::text[])),
+  notes text,
+  created_at timestamp with time zone,
+  updated_at time without time zone,
+  business_id uuid,
+  CONSTRAINT appointment_pkey PRIMARY KEY (apptid),
+  CONSTRAINT appointment_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id),
+  CONSTRAINT fk_appt_client FOREIGN KEY (clientid) REFERENCES public.client(clientid),
+  CONSTRAINT fk_appt_service FOREIGN KEY (serviceid) REFERENCES public.service(serviceid),
+  CONSTRAINT fk_appt_staff FOREIGN KEY (staffid) REFERENCES public.staff(staffid)
+);
+CREATE TABLE public.business_owner (
+  ownerid uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name character varying NOT NULL,
+  email character varying NOT NULL UNIQUE CHECK (email::text ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'::text),
+  businessname character varying NOT NULL CHECK (businessname::text ~* '^[A-Za-z0-9\s]+$'::text),
+  passwordhash character varying,
+  lastlogin timestamp with time zone,
+  accountstatus character varying DEFAULT 'Active'::character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT business_owner_pkey PRIMARY KEY (ownerid)
+);
+CREATE TABLE public.businesses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  owner_id uuid DEFAULT '0605f37f-3790-418d-8d7a-16071b8cffcf'::uuid,
+  CONSTRAINT businesses_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.client (
+  clientid uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name character varying NOT NULL CHECK (name::text ~* '^[A-Za-z\s]+$'::text),
+  email character varying UNIQUE CHECK (email::text ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'::text),
+  phone character varying UNIQUE,
+  password character varying,
+  lastlogin timestamp with time zone,
+  accountstatus character varying DEFAULT 'Active'::character varying,
+  registrationdate timestamp with time zone DEFAULT now(),
+  lastappointmentdate timestamp with time zone,
+  status character varying DEFAULT 'Active'::character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT client_pkey PRIMARY KEY (clientid)
+);
+CREATE TABLE public.feedback (
+  feedbackid uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clientid uuid NOT NULL,
+  apptid uuid,
+  serviceid uuid,
+  staffid uuid,
+  rating integer NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comments text,
+  feedbackdate timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT feedback_pkey PRIMARY KEY (feedbackid),
+  CONSTRAINT fk_feedback_client FOREIGN KEY (clientid) REFERENCES public.client(clientid),
+  CONSTRAINT fk_feedback_appt FOREIGN KEY (apptid) REFERENCES public.appointment(apptid),
+  CONSTRAINT fk_feedback_service FOREIGN KEY (serviceid) REFERENCES public.service(serviceid),
+  CONSTRAINT fk_feedback_staff FOREIGN KEY (staffid) REFERENCES public.staff(staffid)
+);
+CREATE TABLE public.service (
+  serviceid uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name character varying NOT NULL,
+  price numeric NOT NULL DEFAULT 0.00 CHECK (price >= 0::numeric),
+  description text NOT NULL,
+  duration integer,
+  availability character varying NOT NULL DEFAULT 'Available'::character varying CHECK (availability::text = ANY (ARRAY['Available'::character varying, 'Unavailable'::character varying, 'Limited'::character varying]::text[])),
+  categoryid integer,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  businessid uuid NOT NULL,
+  CONSTRAINT service_pkey PRIMARY KEY (serviceid),
+  CONSTRAINT service_businessid_fkey FOREIGN KEY (businessid) REFERENCES public.businesses(id)
+);
+CREATE TABLE public.staff (
+  staffid uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name character varying NOT NULL CHECK (name::text ~* '^[A-Za-z\s]+$'::text),
+  role character varying NOT NULL,
+  availability character varying,
+  ownerid uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT staff_pkey PRIMARY KEY (staffid),
+  CONSTRAINT fk_staff_owner FOREIGN KEY (ownerid) REFERENCES public.business_owner(ownerid)
+);
+
+
