@@ -144,8 +144,8 @@ export default function ServiceOfferedPage() {
       <section className="services-section">
         <div className="container">
           <div className="services-grid">
-            {services?.map((service) => (
-              <div className="service-card" key={service.id}>
+            {services?.map((service, index) => (
+              <div className="service-card" key={`${service.id}-${index}`}>
                 <div className="service-image">
                   <i className="fas fa-eye"></i>
                 </div>

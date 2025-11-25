@@ -191,7 +191,6 @@ export default function ServiceManagementForm() {
                       type="button"
                       onClick={() => setShowForm(false)}
                       variant="outline" className="flex-1 border-amber-600 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-                      className="flex-1"
                     >
                       Cancel
                     </Button>

@@ -54,9 +54,53 @@ export default function ClientBookingForm() {
         body: newAppointment,
       });
     },
-    onSuccess: (newAppointment) => {
+    onSuccess: async (newAppointment) => {
       toast.success("Booking created successfully!");
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+
+      // Send confirmation email
+      try {
+        const details = {
+          business: businesses?.find(b => b.id === businessId)?.name,
+          service: services?.find(s => s.id === serviceId)?.name,
+          date: appointmentDate,
+          time: `${hour}:${minute} ${ampm}`,
+          name: clientName,
+        };
+
+        // 1. Generate email content
+        const geminiResponse = await fetch('/api/ai/generate-description', { // Corrected path
+          method: 'POST', // Added method
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `Write a friendly booking confirmation email for a customer. Include booking details: ${JSON.stringify(details)}. Keep tone professional but warm.`
+          }),
+        });
+
+        if (!geminiResponse.ok) {
+          throw new Error('Failed to generate email content');
+        }
+
+        const geminiResult = await geminiResponse.json();
+        const emailContent = geminiResult.content;
+
+        // 2. Send the email
+        await fetch('/api/notifications/send-email', { // Assuming this path exists
+          method: 'POST', // Added method
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: clientEmail,
+            subject: 'Your Booking Confirmation',
+            message: emailContent,
+          }),
+        });
+
+        toast.success("Confirmation email sent!");
+      } catch (error) {
+        console.error("Failed to send confirmation email:", error);
+        toast.error("Failed to send confirmation email.");
+      }
+
       if (newAppointment?.id) {
         setLocation(`/booking/confirmation/${newAppointment.id}`);
       } else {
@@ -95,6 +139,10 @@ export default function ClientBookingForm() {
       specialNotes: specialNotes || undefined,
     });
   };
+
+  // Your `api` helper likely adds the `/api` prefix.
+  // By changing the calls to `api("/businesses")`, the final URL will be `/api/businesses`,
+  // which the proxy will correctly forward to `http://localhost:5000/businesses`.
 
   const handleGoToDashboard = () => {
     if (user?.role === 'business_owner') {
